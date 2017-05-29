@@ -1,0 +1,255 @@
+<html>
+<head>
+    <title>Save the planet</title>
+
+    <style>
+    	body{
+    		margin: 0;
+    		overflow: hidden;
+        }
+
+        canvas{
+            position: absolute;
+            width: 100%;
+             height: 100%;
+            overflow: hidden;
+            background: linear-gradient(    #112155,    #543e69);
+        }
+
+    </style>
+</head>
+<body>
+
+    <canvas id="myCanvas"></canvas>
+
+    <script src="three.js"></script>
+    <script>
+
+    var scene,meshp,x=550,collision=false,collision2=false,firstBB,secondBB,thirdBB,meshm,scene,camera,meshm2;
+    var mousePos={x:0, y:0},cnt=0,cnt2=0,renderer,mesh,end=0,space,meshs;
+
+//handle the mousemove event
+function handleMouseMove(event) {
+
+    // here we are converting the mouse position value received 
+    // to a normalized value varying between -1 and 1;
+    // this is the formula for the horizontal axis:
+    
+    var tx = -1 + (event.clientX / window.innerWidth)*2;
+
+    // for the vertical axis, we need to inverse the formula 
+    // because the 2D y-axis goes the opposite direction of the 3D y-axis
+    
+    var ty = 1 - (event.clientY / window.innerHeight)*2;
+    mousePos = {x:tx, y:ty};
+
+}
+
+function restartHandler(event){
+    // Get the key code of the pressed key 
+    end=0;
+    if(event.keyCode == 82)//R key was pressed
+        cnt=cnt2=0;
+        init();
+   }
+function updatePlanet(){
+
+    // depending on the mouse position which ranges between -1 and 1 on both axes;
+    // to achieve that we use a normalize function (see below)
+    
+    var targetX = normalize(mousePos.x, -1, 1, -400, 400);
+    var targetY = normalize(mousePos.y, -1, 1, -75, 175);
+
+    // update the airplane's position
+    meshp.position.y = targetY;
+    meshp.position.x = targetX;
+}
+
+function normalize(v,vmin,vmax,tmin, tmax){
+
+    var nv = Math.max(Math.min(v,vmax), vmin);
+    var dv = vmax-vmin;
+    var pc = (nv-vmin)/dv;
+    var dt = tmax-tmin;
+    var tv = tmin + (pc*dt);
+    return tv;
+
+}
+
+function init(event){ //sets the scene, camera and the sun
+    
+    //RENDERER
+    renderer = new THREE.WebGLRenderer({alpha: true,canvas: document.getElementById('myCanvas'), antialias: true});
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+
+    //CAMERA
+    camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 3000);
+
+    //SCENE
+    scene = new THREE.Scene();
+
+    //OBJECT
+    var sun = new THREE.SphereGeometry(600, 30, 30);
+    var mat = new THREE.MeshPhongMaterial({
+             color:0xff8829,
+            transparent:true,
+            opacity:.9,
+            shading:THREE.FlatShading,
+        });
+    mesh = new THREE.Mesh(sun, mat);
+    mesh.position.set(0, -700,-500);
+    scene.add(mesh);
+
+    //create the planet
+    var planet = new THREE.SphereGeometry(200,10,10);
+    var matp = new THREE.MeshPhongMaterial({
+                color:0x0000ff,
+                transparent:false,
+                opacity:1,
+                shading:THREE.FlatShading,
+            });
+    meshp = new THREE.Mesh(planet,matp);
+    meshp.scale.set(.25,.25,.25);
+    meshp.position.set(-400,0,-1000);
+    scene.add(meshp);
+
+    //create the meteorites
+    //first one
+    var meteorite = new THREE.TorusKnotGeometry(20,20,20,5);
+    var matm = new THREE.MeshPhongMaterial({
+                  color:0x220000,
+                  //specular:0xffffff,
+                  //shininess: 100,
+                 // map: new THREE.TextureLoader().load('texture.jpg'),
+
+            });
+    meshm = new THREE.Mesh(meteorite,matm);
+    var r= Math.random();
+    meshm.position.set(600,50+Math.random()*10*5,-1000);
+    var s = 1+Math.random();
+    meshm.scale.set(s,s,s);            
+    scene.add(meshm);
+
+    //second one
+    var meteorite2 = new THREE.TorusKnotGeometry(20,20,20,5);
+    var matm2 = new THREE.MeshPhongMaterial({
+                color:0x002255,
+            });
+    meshm2 = new THREE.Mesh(meteorite2,matm2);
+    var r2= Math.random();
+    meshm2.position.set(-600,50+Math.random()*10*5,-1000);
+    var s = 1+Math.random();
+    meshm.scale.set(s,s,s); 
+
+    
+    //LIGHTS
+    var light = new THREE.AmbientLight(0xff8829, 0.7);
+    scene.add(light);
+
+    var light1 = new THREE.DirectionalLight(0xff8829, 2.0,600);
+    light1.target = meshp;
+    scene.add(light1);
+ 
+    var light2 = new THREE.SpotLight(0xff8829, 40.0,1000);
+    light2.target = mesh;
+    scene.add(light2);           
+
+
+    document.addEventListener('mousemove', handleMouseMove, false);
+    document.addEventListener("keydown",restartHandler,false);
+
+
+
+    //RENDER LOOP
+    requestAnimationFrame(render);
+
+}
+
+    function render() {
+
+        //collisions
+        firstBB = new THREE.Box3().setFromObject(meshp);
+        secondBB = new THREE.Box3().setFromObject(meshm);
+        thirdBB = new THREE.Box3().setFromObject(meshm2);
+
+
+        if(cnt<3){//level:easy
+            meshm.position.x-=10;  
+        }  
+        else
+            if(cnt<6) {//level: medium
+                meshm.position.x-=15;  
+            }
+            else{//level:expert
+                if(cnt==6){
+                    scene.add(meshm2);
+                }
+
+                if(meshm2.position.x>700){ //tthe meteorite passed the screen once
+                    cnt2++;
+                    r= Math.random();
+                    if((r*10)<4)
+                        meshm2.position.set(-600,-(50+Math.random()*10*5),-1000);
+                    else
+                        meshm2.position.set(-600,100+Math.random()*10*5,-1000);
+
+                    }
+                    meshm2.position.x+=10;  
+                    meshm.position.x-=10;  
+
+                }
+
+        if(meshm.position.x<-700){ //the meteorite passed the screen once
+            cnt++;
+            r= Math.random();
+            if((r*10)<4)
+                meshm.position.set(600,-(50+Math.random()*10*5),-1000);
+            else
+                meshm.position.set(600,100+Math.random()*10*5,-1000);
+
+        }
+        meshp.rotation.y += 0.03;
+        mesh.rotation.x += 0.01;
+
+        collision = firstBB.isIntersectionBox(secondBB);
+        if(collision){ //game over
+            scene.remove(meshp);
+            scene.remove(meshm);
+            if (confirm("You've been smashed! \n\nYou survived :\n"+ cnt +" meteorites \n"+cnt2+" super meteorites\n\nPress R to restart the game.")) {
+                //alert('Thanks for confirming');
+            }
+            else{
+                alert("Thank you for playing!");
+            }
+            end=1;
+
+        }
+    
+        collision2 = firstBB.isIntersectionBox(thirdBB);
+        if(collision2){ //game over
+            scene.remove(meshp);
+            scene.remove(meshm2);
+            if (confirm("You've been smashed! \n\nYou survived :\n"+ cnt +" meteorites \n"+cnt2+" super meteorites\n\nPress R to restart the game.")) {
+                //alert('Thanks for confirming');
+            }
+            else{
+                alert("Thank you for playing!");
+            }
+            end=1;
+        }
+
+        updatePlanet();
+        renderer.render(scene, camera);
+
+        if(end==0)//if a colision is encountered, the game should end
+            requestAnimationFrame(render);
+
+    }
+    
+
+    window.addEventListener('load', init, false);
+
+    </script>
+</body>
+</html>
